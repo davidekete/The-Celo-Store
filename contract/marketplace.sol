@@ -9,7 +9,7 @@ interface IERC20Token {
   function totalSupply() external view returns (uint256);
   function balanceOf(address) external view returns (uint256);
   function allowance(address, address) external view returns (uint256);
-
+ 
   event Transfer(address indexed from, address indexed to, uint256 value);
   event Approval(address indexed owner, address indexed spender, uint256 value);
 }
@@ -25,8 +25,8 @@ contract Marketplace {
         string image;
         string description;
         string location;
+        uint quantity;
         uint price;
-        uint sold;
     }
 
     mapping (uint => Product) internal products;
@@ -35,18 +35,19 @@ contract Marketplace {
         string memory _name,
         string memory _image,
         string memory _description, 
-        string memory _location, 
+        string memory _location,
+        uint _quantity,
         uint _price
     ) public {
-        uint _sold = 0;
         products[productsLength] = Product(
             payable(msg.sender),
             _name,
             _image,
             _description,
             _location,
-            _price,
-            _sold
+            _quantity,
+            _price
+            
         );
         productsLength++;
     }
@@ -66,11 +67,11 @@ contract Marketplace {
             products[_index].image, 
             products[_index].description, 
             products[_index].location, 
-            products[_index].price,
-            products[_index].sold
+            products[_index].quantity,
+            products[_index].price
         );
     }
-    
+
     function buyProduct(uint _index) public payable  {
         require(
           IERC20Token(cUsdTokenAddress).transferFrom(
@@ -78,12 +79,20 @@ contract Marketplace {
             products[_index].owner,
             products[_index].price
           ),
-          "Transfer failed."
+          "Purchase failed."
         );
-        products[_index].sold++;
+        products[_index].quantity--;
     }
     
     function getProductsLength() public view returns (uint) {
         return (productsLength);
+    }
+
+    function deleteProduct(uint _index) public{
+        delete products[_index];
+    }
+
+    function restock(uint _index,uint _quantity) public {
+        products[_index].quantity= _quantity;
     }
 }

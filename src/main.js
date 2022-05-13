@@ -5,15 +5,12 @@ import marketplaceAbi from "../contract/marketplace.abi.json";
 import erc20Abi from "../contract/erc20.abi.json";
 
 const ERC20_DECIMALS = 18;
-const MPContractAddress = "0xC64B95AadF9BA711104a4522a213EB5d73398185";
-const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
-
+const MPContractAddress = "0x0622F71fAB3F03C0b475489fEe1C578f06B789C8";
+const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
 let kit;
 let contract;
 let products = [];
-
-
 
 const connectCeloWallet = async function () {
   if (window.celo) {
@@ -38,12 +35,12 @@ const connectCeloWallet = async function () {
 };
 
 async function approve(_price) {
-  const cUSDContract = new kit.web3.eth.Contract(erc20Abi, cUSDContractAddress)
+  const cUSDContract = new kit.web3.eth.Contract(erc20Abi, cUSDContractAddress);
 
   const result = await cUSDContract.methods
     .approve(MPContractAddress, _price)
-    .send({ from: kit.defaultAccount })
-  return result
+    .send({ from: kit.defaultAccount });
+  return result;
 }
 
 const getBalance = async function () {
@@ -65,8 +62,8 @@ const getProducts = async function () {
         image: p[2],
         description: p[3],
         location: p[4],
-        price: new BigNumber(p[5]),
-        sold: p[6],
+        quantity: p[5],
+        price: new BigNumber(p[6]),
       });
     });
     _products.push(_product);
@@ -90,7 +87,7 @@ function productTemplate(_product) {
       <div class="card mb-4">
         <img class="card-img-top" src="${_product.image}" alt="...">
         <div class="position-absolute top-0 end-0 bg-warning mt-4 px-2 py-1 rounded-start">
-          ${_product.sold} Sold
+          ${_product.quantity} Remaining
         </div>
         <div class="card-body text-left p-4 position-relative">
           <div class="translate-middle-y position-absolute top-0">
@@ -113,9 +110,15 @@ function productTemplate(_product) {
                 .toFixed(2)} cUSD
             </a>
           </div>
+          <br/>
+          <div class="d-grid gap-2">
+            <a class="btn btn-lg btn-outline-dark restockBtn fs-6 p-3" data-bs-toggle="modal" data-bs-target="#restock-modal" id=${
+              _product.index
+            } >Restock</a>
+          </div>
         </div>
       </div>
-    `;
+      `;
 }
 
 function identiconTemplate(_address) {
@@ -162,10 +165,12 @@ document
       document.getElementById("newImgUrl").value,
       document.getElementById("newProductDescription").value,
       document.getElementById("newLocation").value,
+      document.getElementById("newProductQuantity").value,
       new BigNumber(document.getElementById("newPrice").value)
         .shiftedBy(ERC20_DECIMALS)
         .toString(),
     ];
+
     notification(`⌛ Adding "${params[0]}"...`);
     try {
       const result = await contract.methods
@@ -178,25 +183,49 @@ document
     getProducts();
   });
 
-  document.querySelector("#marketplace").addEventListener("click", async (e) => {
-    if (e.target.className.includes("buyBtn")) {
-      const index = e.target.id
-      notification("⌛ Waiting for payment approval...")
-      try {
-        await approve(products[index].price)
-      } catch (error) {
-        notification(`⚠️ ${error}.`)
-      }
-      notification(`⌛ Awaiting payment for "${products[index].name}"...`)
-      try {
-        const result = await contract.methods
-          .buyProduct(index)
-          .send({ from: kit.defaultAccount })
-        notification(`🎉 You successfully bought "${products[index].name}".`)
-        getProducts()
-        getBalance()
-      } catch (error) {
-        notification(`⚠️ ${error}.`)
-      }
+document.querySelector("#marketplace").addEventListener("click", async (e) => {
+  if (e.target.className.includes("restockBtn")) {
+    const index = e.target.id;
+    const newQuantity = document.getElementById("newProductQuantity").value;
+    console.log(newQuantity)
+
+    try {
+      let result=await contract.methods
+        .restock(index, newQuantity)
+        .send({ from: kit.defaultAccount });
+    } catch (error) {
+      notification(`⚠️ ${error}.`);
     }
-  })
+  }
+});
+
+document.querySelector("#marketplace").addEventListener("click", async (e) => {
+  if (e.target.className.includes("buyBtn")) {
+    const index = e.target.id;
+    notification("⌛ Waiting for payment approval...");
+    try {
+      await approve(products[index].price);
+    } catch (error) {
+      notification(`⚠️ ${error}.`);
+    }
+    notification(`⌛ Awaiting payment for "${products[index].name}"...`);
+    try {
+      const result = await contract.methods
+        .buyProduct(index)
+        .send({ from: kit.defaultAccount });
+      notification(`🎉 You successfully bought "${products[index].name}".`);
+      getProducts();
+      getBalance();
+      deleteProduct(index);
+    } catch (error) {
+      notification(`⚠️ ${error}.`);
+    }
+  }
+});
+
+async function deleteProduct(index) {
+  if (products[index].quantity === 0) {
+    await contract.methods.deleteProduct(index);
+    products.slice(index, 1);
+  }
+}
