@@ -17,6 +17,7 @@ interface IERC20Token {
 contract Marketplace {
 
     uint internal productsLength = 0;
+    uint internal soldUnits=0;
     address internal cUsdTokenAddress = 0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
 
     struct Product {
@@ -82,10 +83,15 @@ contract Marketplace {
           "Purchase failed."
         );
         products[_index].quantity--;
+        soldUnits++;
     }
     
     function getProductsLength() public view returns (uint) {
         return (productsLength);
+    }
+
+    function getUnitsSold() public view returns(uint){
+        return (soldUnits);
     }
 
     function deleteProduct(uint _index) public{
@@ -93,6 +99,6 @@ contract Marketplace {
     }
 
     function restock(uint _index,uint _quantity) public {
-        products[_index].quantity= _quantity;
+        products[_index].quantity= products[_index].quantity+ _quantity;
     }
 }

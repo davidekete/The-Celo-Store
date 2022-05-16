@@ -5,12 +5,24 @@ import marketplaceAbi from "../contract/marketplace.abi.json";
 import erc20Abi from "../contract/erc20.abi.json";
 
 const ERC20_DECIMALS = 18;
-const MPContractAddress = "0x0622F71fAB3F03C0b475489fEe1C578f06B789C8";
+const MPContractAddress = "0x160079f227D137502b81d40F0AF7CE7f1Bdc9Fb0";
 const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
 let kit;
 let contract;
 let products = [];
+
+//declaring metrics
+// let resultProducts = 0;
+// let resultSold = 0;
+
+//selecting DOM elements to maintain DRY principle
+const newProductBtn = document.querySelector("#newProductBtn");
+let marketplace = document.querySelector("#marketplace");
+const cUsdBalanceElement = document.querySelector("#balance");
+const alertElement = document.querySelector(".alert");
+// let listText = document.querySelector("#listcount").textContent;
+// let soldText = document.querySelector("#soldcount").textContent;
 
 const connectCeloWallet = async function () {
   if (window.celo) {
@@ -46,7 +58,7 @@ async function approve(_price) {
 const getBalance = async function () {
   const totalBalance = await kit.getTotalBalance(kit.defaultAccount);
   const cUSDBalance = totalBalance.cUSD.shiftedBy(-ERC20_DECIMALS).toFixed(2);
-  document.querySelector("#balance").textContent = cUSDBalance;
+  cUsdBalanceElement.textContent = cUSDBalance;
 };
 
 const getProducts = async function () {
@@ -73,12 +85,12 @@ const getProducts = async function () {
 };
 
 function renderProducts() {
-  document.getElementById("marketplace").innerHTML = "";
+  marketplace.innerHTML = "";
   products.forEach((_product) => {
     const newDiv = document.createElement("div");
     newDiv.className = "col-md-4";
     newDiv.innerHTML = productTemplate(_product);
-    document.getElementById("marketplace").appendChild(newDiv);
+    marketplace.appendChild(newDiv);
   });
 }
 
@@ -141,12 +153,13 @@ function identiconTemplate(_address) {
 }
 
 function notification(_text) {
-  document.querySelector(".alert").style.display = "block";
+  alertElement.style.display = "block";
   document.querySelector("#notification").textContent = _text;
+  setTimeout(notificationOff, 7000);
 }
 
 function notificationOff() {
-  document.querySelector(".alert").style.display = "none";
+  alertElement.style.display = "none";
 }
 
 window.addEventListener("load", async () => {
@@ -157,75 +170,93 @@ window.addEventListener("load", async () => {
   notificationOff();
 });
 
-document
-  .querySelector("#newProductBtn")
-  .addEventListener("click", async (e) => {
-    const params = [
-      document.getElementById("newProductName").value,
-      document.getElementById("newImgUrl").value,
-      document.getElementById("newProductDescription").value,
-      document.getElementById("newLocation").value,
-      document.getElementById("newProductQuantity").value,
-      new BigNumber(document.getElementById("newPrice").value)
-        .shiftedBy(ERC20_DECIMALS)
-        .toString(),
-    ];
+newProductBtn.addEventListener("click", async (e) => {
+  const params = [
+    document.getElementById("newProductName").value,
+    document.getElementById("newImgUrl").value,
+    document.getElementById("newProductDescription").value,
+    document.getElementById("newLocation").value,
+    document.getElementById("newProductQuantity").value,
+    new BigNumber(document.getElementById("newPrice").value)
+      .shiftedBy(ERC20_DECIMALS)
+      .toString(),
+  ];
 
-    notification(`⌛ Adding "${params[0]}"...`);
-    try {
-      const result = await contract.methods
-        .writeProduct(...params)
-        .send({ from: kit.defaultAccount });
-    } catch (error) {
-      notification(`⚠️ ${error}.`);
-    }
-    notification(`🎉 You successfully added "${params[0]}".`);
-    getProducts();
-  });
+  notification(`⌛ Adding "${params[0]}"...`);
+  try {
+    const result = await contract.methods
+      .writeProduct(...params)
+      .send({ from: kit.defaultAccount });
+  } catch (error) {
+    notification(`⚠️ ${error}.`);
+  }
+  notification(`🎉 You successfully added "${params[0]}".`);
+  resultProducts++;
+  document.querySelector("#listcount").textContent = resultProducts;
+  getProducts();
+});
 
-document.querySelector("#marketplace").addEventListener("click", async (e) => {
+marketplace.addEventListener("click", async (e) => {
+  let newQuantity;
+  let rand = document.getElementById("restockfield");
+
   if (e.target.className.includes("restockBtn")) {
     const index = e.target.id;
-    const newQuantity = document.getElementById("newProductQuantity").value;
-    console.log(newQuantity)
-
-    try {
-      let result=await contract.methods
-        .restock(index, newQuantity)
-        .send({ from: kit.defaultAccount });
-    } catch (error) {
-      notification(`⚠️ ${error}.`);
-    }
+    document
+      .querySelector("#restockbtnsubmit")
+      .addEventListener("click", async (e) => {
+        newQuantity = rand.value;
+        if (newQuantity !== "")
+          try {
+            await contract.methods
+              .restock(index, newQuantity)
+              .send({ from: kit.defaultAccount });
+            notification(
+              `🎉 You have successfully restocked "${products[index].name}".`
+            );
+            getProducts();
+          } catch (error) {
+            notification(`⚠️ ${error}.`);
+          }
+      });
   }
 });
 
-document.querySelector("#marketplace").addEventListener("click", async (e) => {
+marketplace.addEventListener("click", async (e) => {
   if (e.target.className.includes("buyBtn")) {
     const index = e.target.id;
-    notification("⌛ Waiting for payment approval...");
-    try {
-      await approve(products[index].price);
-    } catch (error) {
-      notification(`⚠️ ${error}.`);
-    }
-    notification(`⌛ Awaiting payment for "${products[index].name}"...`);
-    try {
-      const result = await contract.methods
-        .buyProduct(index)
-        .send({ from: kit.defaultAccount });
-      notification(`🎉 You successfully bought "${products[index].name}".`);
-      getProducts();
-      getBalance();
-      deleteProduct(index);
-    } catch (error) {
-      notification(`⚠️ ${error}.`);
+    if (products[index].quantity !== "0") {
+      notification("⌛ Waiting for payment approval...");
+      try {
+        await approve(products[index].price);
+      } catch (error) {
+        notification(`⚠️ ${error}.`);
+      }
+      notification(`⌛ Awaiting payment for "${products[index].name}"...`);
+      try {
+        const result = await contract.methods
+          .buyProduct(index)
+          .send({ from: kit.defaultAccount });
+        notification(`🎉 You successfully bought "${products[index].name}".`);
+        getProducts();
+        getBalance();
+        deleteProduct(index);
+      } catch (error) {
+        notification(`⚠️ ${error}.`);
+      }
+    } else {
+      notification(
+        `⚠️ Product is currently out of stock, please try again later`
+      );
+      setTimeout(notificationOff, 7000);
     }
   }
 });
 
 async function deleteProduct(index) {
-  if (products[index].quantity === 0) {
+  if (products[index].quantity === "0") {
     await contract.methods.deleteProduct(index);
-    products.slice(index, 1);
+    products.splice(index, 1);
+    products[index].remove();
   }
 }

@@ -65,8 +65,17 @@
           Add product
         </a>
       </div>
+      <div class="d-flex  justify-content-around">
+        <h3>
+          Products Listed: <span id="listcount">1</span>
+        </h3>
+        <h3>
+          Products Sold: <span id="soldcount">1</span>
+        </h3>
+      </div>
       <main id="marketplace" class="row"></main>
     </div>
+    <!--  -->
     <div
       class="modal fade"
       id="addModal"
@@ -161,45 +170,6 @@
     </div>
     <!--/Modal-->
     <!-- restock modal -->
-    <!-- <div
-  class="modal fade"
-  id="addModal"
-  tabindex="-1"
-  aria-labelledby="newProductModalLabel"
-  aria-hidden="true"
->
-    <div class="modal-body">
-      <form>
-        <div class="form-row">
-          <div class="col">
-            <input
-              type="text"
-              id="newProductQuantity"
-              class="form-control mb-2"
-              placeholder="Enter new quantity"
-            />
-          </div>
-          </form>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-light border"
-              data-bs-dismiss="modal"
-            >
-              Close
-            </button>
-            <button
-              type="button"
-              class="btn btn-dark"
-              data-bs-dismiss="modal"
-              id="newProductBtn"
-            >
-              Restock
-            </button>
-          </div>
-          </div>
-          </div> -->
-    <!-- restock modal -->
     <div
       class="modal fade"
       id="restock-modal"
@@ -218,24 +188,29 @@
               aria-label="Close"
             ></button>
           </div>
-            <div class="modal-body">
-              <form>
-                  <div class="col">
-                    <input
-                      type="number"
-                      id="newProductQuantity"
-                      class="form-control mb-2"
-                      placeholder="Enter new quantity"
-                    />
-                  </div>
-                  <div class="modal-footer">
-                    <button class="btn btn-primary" id="restockbtn">submit</button>
-                  </div>
-                </form>
+            <div>
+              <input
+                type="text"
+                id="restockfield"
+                class="form-control mb-2"
+                placeholder="Enter new quantity"
+              />
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-dark"
+                data-bs-dismiss="modal"
+                id="restockbtnsubmit"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
-        
+        </div>
       </div>
     </div>
+
     <!-- restock modal -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
