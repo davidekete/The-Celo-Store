@@ -32,6 +32,12 @@ contract Marketplace {
 
     mapping (uint => Product) internal products;
 
+    // events triggered when specific functions are called
+    event AddedProduct(address indexed owner, uint256 product_quantity, uint256 product_index);
+    event BoughtProduct(address indexed buyer, uint256 product_quantity, uint256 product_index);
+    event RestockedProducts(address indexed owner, uint product_quantity_added, uint256 product_index);
+    event ProductOutOfStock(address indexed owner, uint256 product_index);
+
     function writeProduct(
         string memory _name,
         string memory _image,
@@ -50,6 +56,7 @@ contract Marketplace {
             _price
             
         );
+        emit AddedProduct(msg.sender, _quantity, productsLength);
         productsLength++;
     }
 
@@ -73,17 +80,22 @@ contract Marketplace {
         );
     }
 
-    function buyProduct(uint _index) public payable  {
+    function buyProduct(uint _index, uint256 quantity) public payable  {
+        require (quantity >= products[_index].quantity, "You cannot buy more than the stock");
         require(
           IERC20Token(cUsdTokenAddress).transferFrom(
             msg.sender,
             products[_index].owner,
-            products[_index].price
+            products[_index].price * quantity
           ),
           "Purchase failed."
         );
-        products[_index].quantity--;
-        soldUnits++;
+        products[_index].quantity = products[_index].quantity - quantity;
+        soldUnits = soldUnits + quantity;
+        emit BoughtProduct(msg.sender, quantity, _index); // emiting the BoughtProduct event
+        if (products[_index].quantity == 0) {
+            emit ProductOutOfStock(products[_index].owner, _index); // emiting the ProductOutOfStock event if quantity is 0
+        }
     }
     
     function getProductsLength() public view returns (uint) {
@@ -94,8 +106,9 @@ contract Marketplace {
         return (soldUnits);
     }
 
-
     function restock(uint _index,uint _quantity) public {
+        require (msg.sender == products[_index].owner, "Only the owner can restock");
         products[_index].quantity= products[_index].quantity+ _quantity;
+        emit RestockedProducts(msg.sender, _quantity, _index);
     }
 }
