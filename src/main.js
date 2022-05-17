@@ -5,25 +5,23 @@ import marketplaceAbi from "../contract/marketplace.abi.json";
 import erc20Abi from "../contract/erc20.abi.json";
 
 const ERC20_DECIMALS = 18;
-const MPContractAddress = "0x160079f227D137502b81d40F0AF7CE7f1Bdc9Fb0";
+const MPContractAddress = "0x6e53D0011c71E8032033141eD289F9ee5aB53c61";
 const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
 let kit;
 let contract;
 let products = [];
 
-//declaring metrics
-// let resultProducts = 0;
-// let resultSold = 0;
-
 //selecting DOM elements to maintain DRY principle
 const newProductBtn = document.querySelector("#newProductBtn");
 let marketplace = document.querySelector("#marketplace");
 const cUsdBalanceElement = document.querySelector("#balance");
 const alertElement = document.querySelector(".alert");
-// let listText = document.querySelector("#listcount").textContent;
-// let soldText = document.querySelector("#soldcount").textContent;
 
+const lenthMetric = document.querySelector("#listcount");
+const soldMetric = document.querySelector("#soldcount");
+
+//Connect Wallet
 const connectCeloWallet = async function () {
   if (window.celo) {
     notification("⚠️ Please approve this DApp to use it.");
@@ -46,6 +44,7 @@ const connectCeloWallet = async function () {
   }
 };
 
+//Approve Buy
 async function approve(_price) {
   const cUSDContract = new kit.web3.eth.Contract(erc20Abi, cUSDContractAddress);
 
@@ -55,12 +54,14 @@ async function approve(_price) {
   return result;
 }
 
+//Get Wallet Balance
 const getBalance = async function () {
   const totalBalance = await kit.getTotalBalance(kit.defaultAccount);
   const cUSDBalance = totalBalance.cUSD.shiftedBy(-ERC20_DECIMALS).toFixed(2);
   cUsdBalanceElement.textContent = cUSDBalance;
 };
 
+//Render Previously Added Products
 const getProducts = async function () {
   const _productsLength = await contract.methods.getProductsLength().call();
   const _products = [];
@@ -84,6 +85,7 @@ const getProducts = async function () {
   renderProducts();
 };
 
+//Display Products
 function renderProducts() {
   marketplace.innerHTML = "";
   products.forEach((_product) => {
@@ -94,6 +96,7 @@ function renderProducts() {
   });
 }
 
+//Create Product Template
 function productTemplate(_product) {
   return `
       <div class="card mb-4">
@@ -133,6 +136,7 @@ function productTemplate(_product) {
       `;
 }
 
+//Insert Identicon
 function identiconTemplate(_address) {
   const icon = blockies
     .create({
@@ -152,24 +156,29 @@ function identiconTemplate(_address) {
             `;
 }
 
+//Turn on Notification
 function notification(_text) {
   alertElement.style.display = "block";
   document.querySelector("#notification").textContent = _text;
   setTimeout(notificationOff, 7000);
 }
 
+//Turn off Notification
 function notificationOff() {
   alertElement.style.display = "none";
 }
 
+//Initailization funtion
 window.addEventListener("load", async () => {
   notification("⌛ Loading...");
   await connectCeloWallet();
   await getBalance();
   await getProducts();
+  await getMetrics();
   notificationOff();
 });
 
+//Add New Product
 newProductBtn.addEventListener("click", async (e) => {
   const params = [
     document.getElementById("newProductName").value,
@@ -191,11 +200,11 @@ newProductBtn.addEventListener("click", async (e) => {
     notification(`⚠️ ${error}.`);
   }
   notification(`🎉 You successfully added "${params[0]}".`);
-  resultProducts++;
-  document.querySelector("#listcount").textContent = resultProducts;
+  await getMetrics();
   getProducts();
 });
 
+//Restock function
 marketplace.addEventListener("click", async (e) => {
   let newQuantity;
   let rand = document.getElementById("restockfield");
@@ -222,6 +231,7 @@ marketplace.addEventListener("click", async (e) => {
   }
 });
 
+//Buy function
 marketplace.addEventListener("click", async (e) => {
   if (e.target.className.includes("buyBtn")) {
     const index = e.target.id;
@@ -240,7 +250,7 @@ marketplace.addEventListener("click", async (e) => {
         notification(`🎉 You successfully bought "${products[index].name}".`);
         getProducts();
         getBalance();
-        deleteProduct(index);
+        await getMetrics();
       } catch (error) {
         notification(`⚠️ ${error}.`);
       }
@@ -248,15 +258,16 @@ marketplace.addEventListener("click", async (e) => {
       notification(
         `⚠️ Product is currently out of stock, please try again later`
       );
-      setTimeout(notificationOff, 7000);
     }
   }
 });
 
-async function deleteProduct(index) {
-  if (products[index].quantity === "0") {
-    await contract.methods.deleteProduct(index);
-    products.splice(index, 1);
-    products[index].remove();
-  }
+//Get and Set Metrics
+async function getMetrics() {
+  //calling contract methods
+  let productLength = await contract.methods.getProductsLength().call();
+  let soldProducts = await contract.methods.getUnitsSold().call();
+  //setting textcontent
+  lenthMetric.textContent = productLength;
+  soldMetric.textContent = soldProducts;
 }

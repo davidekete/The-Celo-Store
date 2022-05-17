@@ -94,9 +94,6 @@ contract Marketplace {
         return (soldUnits);
     }
 
-    function deleteProduct(uint _index) public{
-        delete products[_index];
-    }
 
     function restock(uint _index,uint _quantity) public {
         products[_index].quantity= products[_index].quantity+ _quantity;
