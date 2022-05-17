@@ -7,7 +7,7 @@ This is a simple dapp where users can:
 * See the Metrics of the Market
 
 ## Live Demo
-[Marketplace Dapp](https://dacadeorg.github.io/celo-marketplace-dapp/)
+[The Celo Store](https://davidekete.github.io/The-Celo-Store/)
 
 ## Usage
 
