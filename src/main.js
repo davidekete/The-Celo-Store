@@ -5,7 +5,7 @@ import marketplaceAbi from "../contract/marketplace.abi.json";
 import erc20Abi from "../contract/erc20.abi.json";
 
 const ERC20_DECIMALS = 18;
-const MPContractAddress = "0x6e53D0011c71E8032033141eD289F9ee5aB53c61";
+const MPContractAddress = "0x52c98AaEe9C2A0E8101dBdbd7cd45A456fE721E7";
 const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 
 let kit;
@@ -241,11 +241,13 @@ marketplace.addEventListener("click", async (e) => {
     document
       .getElementById("buyquantitysubmit")
       .addEventListener("click", async (e) => {
+        e.preventDefault();
         buyQuantity = inputEL.value;
         if (products[index].quantity !== "0") {
           notification("⌛ Waiting for payment approval...");
+          let netPrice = products[index].price * buyQuantity;
           try {
-            await approve(products[index].price);
+            await approve(netPrice.toString());
           } catch (error) {
             notification(`⚠️ ${error}.`);
           }
