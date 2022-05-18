@@ -81,7 +81,7 @@ contract Marketplace {
     }
 
     function buyProduct(uint _index, uint256 quantity) public payable  {
-        require (quantity >= products[_index].quantity, "You cannot buy more than the stock");
+        require (quantity <= products[_index].quantity, "You cannot buy more than the stock");
         require(
           IERC20Token(cUsdTokenAddress).transferFrom(
             msg.sender,
