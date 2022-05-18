@@ -117,7 +117,7 @@ function productTemplate(_product) {
             <span>${_product.location}</span>
           </p>
           <div class="d-grid gap-2">
-            <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${
+            <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" data-bs-toggle="modal" data-bs-target="#quantity-modal" id=${
               _product.index
             }>
               Buy for ${_product.price
@@ -207,14 +207,14 @@ newProductBtn.addEventListener("click", async (e) => {
 //Restock function
 marketplace.addEventListener("click", async (e) => {
   let newQuantity;
-  let rand = document.getElementById("restockfield");
+  let inputEl = document.getElementById("restockfield");
 
   if (e.target.className.includes("restockBtn")) {
     const index = e.target.id;
     document
       .querySelector("#restockbtnsubmit")
       .addEventListener("click", async (e) => {
-        newQuantity = rand.value;
+        newQuantity = inputEl.value;
         if (newQuantity !== "")
           try {
             await contract.methods
@@ -233,32 +233,42 @@ marketplace.addEventListener("click", async (e) => {
 
 //Buy function
 marketplace.addEventListener("click", async (e) => {
+  let buyQuantity;
+  let inputEL = document.getElementById("buyquantity");
+
   if (e.target.className.includes("buyBtn")) {
     const index = e.target.id;
-    if (products[index].quantity !== "0") {
-      notification("⌛ Waiting for payment approval...");
-      try {
-        await approve(products[index].price);
-      } catch (error) {
-        notification(`⚠️ ${error}.`);
-      }
-      notification(`⌛ Awaiting payment for "${products[index].name}"...`);
-      try {
-        const result = await contract.methods
-          .buyProduct(index)
-          .send({ from: kit.defaultAccount });
-        notification(`🎉 You successfully bought "${products[index].name}".`);
-        getProducts();
-        getBalance();
-        await getMetrics();
-      } catch (error) {
-        notification(`⚠️ ${error}.`);
-      }
-    } else {
-      notification(
-        `⚠️ Product is currently out of stock, please try again later`
-      );
-    }
+    document
+      .getElementById("buyquantitysubmit")
+      .addEventListener("click", async (e) => {
+        buyQuantity = inputEL.value;
+        if (products[index].quantity !== "0") {
+          notification("⌛ Waiting for payment approval...");
+          try {
+            await approve(products[index].price);
+          } catch (error) {
+            notification(`⚠️ ${error}.`);
+          }
+          notification(`⌛ Awaiting payment for "${products[index].name}"...`);
+          try {
+            const result = await contract.methods
+              .buyProduct(index, buyQuantity)
+              .send({ from: kit.defaultAccount });
+            notification(
+              `🎉 You successfully bought "${products[index].name}".`
+            );
+            getProducts();
+            getBalance();
+            await getMetrics();
+          } catch (error) {
+            notification(`⚠️ ${error}.`);
+          }
+        } else {
+          notification(
+            `⚠️ Product is currently out of stock, please try again later`
+          );
+        }
+      });
   }
 });
 
